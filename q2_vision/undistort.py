@@ -2,41 +2,41 @@ import cv2
 import numpy as np
 from scipy.optimize import minimize
 
-def detect_lines(image_path):
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    if image is None:
+def findTheSquiggles(picFile):
+    pic = cv2.imread(picFile, cv2.IMREAD_GRAYSCALE)
+    if pic is None:
         return None
     
-    edges = cv2.Canny(image, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
+    sharpBits = cv2.Canny(pic, 50, 150)
+    straightishThings = cv2.HoughLinesP(sharpBits, 1, np.pi / 180, threshold=100, minLineLength=50, maxLineGap=10)
     
-    return [line[0] for line in lines]
+    return [thing[0] for thing in straightishThings]
 
-def cost_function(params, lines):
-    k1, k2 = params
-    total_error = 0.0
+def calculateTheOuchie(magicNumbers, straightishThings):
+    wobble, warp = magicNumbers
+    bigSadness = 0.0
 
-    for (x1, y1, x2, y2) in lines:
-        error = np.abs((y2 - y1) - (x2 - x1) * k1) + np.abs(k2 * (x1**2))
-        total_error += error
+    for (x1, y1, x2, y2) in straightishThings:
+        littleSad = np.abs((y2 - y1) - (x2 - x1) * wobble) + np.abs(warp * (x1**2))
+        bigSadness += littleSad
         
-    return total_error + (k1**2 + k2**2) * 0.1
+    return bigSadness + (wobble**2 + warp**2) * 0.1
 
 if __name__ == "__main__":
-    lines = detect_lines('your_photo.jpg')
+    allTheLines = findTheSquiggles('your_grid.jpg')
     
-    if lines:
-        print(f"Detected {len(lines)} line segments.")
+    if allTheLines:
+        print(f"Found {len(allTheLines)} squiggly lines.")
 
-        x0 = [10.0, 10.0]
+        aWildGuess = [10.0, 10.0]
 
-        print("Optimizing distortion parameters...")
-        res = minimize(cost_function, x0, args=(lines,), method='Powell')
+        print("Asking the math wizard...")
+        theAnswer = minimize(calculateTheOuchie, aWildGuess, args=(allTheLines,), method='Powell')
         
-        if res.success:
-            print(f"Optimization finished. Found params: {res.x}")
+        if theAnswer.success:
+            print(f"The wizard is done. Magic numbers are: {theAnswer.x}")
         else:
-            print("Optimization failed to converge.")
+            print("The wizard gave up.")
             
     else:
-        print("Error: Could not read 'your_photo.jpg' or no lines found.")
+        print("Error: Could not find 'your_grid.jpg' or it's just a blank wall.")
