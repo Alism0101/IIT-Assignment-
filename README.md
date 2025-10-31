@@ -1,71 +1,69 @@
-# Technical Aptitude Submission - L. Ali Ismail Khan
-# T John Institute of Technology (2022-2026)
+Here is my submission for the Technical Aptitude round.
 
-## Submission Strategy
+My GitHub repository with all code and assets is located at: `[Your GitHub Link Here]`
 
-Given the deadline [user text] and the intentional difficulty of the problems [user text], I have adopted a triage strategy. I focused on demonstrating correct conceptual implementation and robust problem-solving approaches for all questions, prioritizing code structure and theoretical soundness over perfect final results.
-
-[cite_start]My GitHub commits reflect the development process for each module as requested[cite: 29].
+Given the deadline and the complexity of the problems, I had to triage my approach. I focused on a full implementation for Question 3, as it aligns directly with my Computer Science background. For Questions 1 and 2, I've focused on demonstrating my problem-solving methodology with core implementations and detailed conceptual write-ups.
 
 ---
 
-## 
-Question 1: Imaging Science
+##  Question 1: Imaging Science
 
-[cite_start]My approach is to use Homomorphic Filtering to separate reflectance $R$ from illumination $L$[cite: 7]. [cite_start]The model $I = R \times L$ is converted to $\log(I) = \log(R) + \log(L)$[cite: 12]. [cite_start]I estimate $\log(L)$ (the low-frequency component [cite: 10][cite_start]) by blurring $\log(I)$ and then find $\log(R)$ (the high-frequency texture [cite: 9]) via subtraction.
+My approach here was to implement Homomorphic Filtering. The core idea is to take the model $I = R \times L$ and move it to the log domain, making it $log(I) = log(R) + log(L)$. From there, I can treat $log(L)$ (illumination) as the low-frequency component and $log(R)$ (reflectance) as the high-frequency component.
 
-* [cite_start]**Part 1 (Theory):** Histogram equalization fails because it is a global intensity mapping; it cannot distinguish a dark pixel (low $R$) in bright light (high $L$) from a bright pixel (high $R$) in a shadow (low $L$)[cite: 11]. My strategy, Homomorphic Filtering, can.
-* **Part 2 (Implementation):** The file `q1_imaging/filter.py` contains my implementation. [cite_start]It includes a function `manual_low_pass_filter` that performs a 2D convolution "manually" as requested[cite: 12], without `cv2.filter2D`.
-* **Part 3 (Color):** My proposed algorithm in the code converts the image to the **CIE L\*a\*b\*** color space. This perceptually isolates lightness (the L\* channel) from color (the a\* and b\* channels). [cite_start]The filtering is applied *only* to the L\* channel, preserving the true color ratios [cite: 14] when converted back to BGR.
+* **Part 1 (Theory):** I've explained in my README why simple histogram equalization fails —it's a global operation and can't distinguish a dark texture from a shadow.
+* **Part 2 (Implementation):** The code is in `q1_imaging/`. I wrote a function `manual_low_pass_filter` that performs a "manual" 2D convolution via nested loops to separate the components, as requested
+* **Part 3 (Color):** For the color version, my algorithm in the code converts the image from BGR to the **CIE L\*a\*b\*** color space. This is a much better approach than HSV because the L\* channel isolates perceptual lightness. I apply my filter *only* to the L\* channel and then merge it back with the original a\* and b\* channels, preserving the true color ratios
+###  A Note on My Q1 Result
+The implementation *runs*, but my resulting image, `reflectance.jpg`, is clearly wrong. After debugging, I realized I made a critical parameter error. ]To estimate the "slowly varying" illumination, I should have used a very large blur kernel (e.g., 31x31 or 41x41).
 
-###  Note on Q1 Result:
-The resulting reflectance image (`reflectance.jpg`) is suboptimal. I used a **very small kernel (5x5)** for the low-pass filter. This was a poor parameter choice, as this small kernel is capturing the *texture* (high-frequency) as part of the *illumination* (low-frequency). This causes the subtraction `log(I) - log(L_est)` to incorrectly remove the texture itself, leaving a flat, noisy image. [cite_start]A much larger kernel (e.g., 31x31 or larger) would be required to correctly model the "slowly varying" illumination[cite: 10].
+I used a **5x5 kernel**. This was a mistake, as a kernel this small acts as a high-pass filter, not a low-pass one. It ended up capturing the *texture* as part of the illumination, and when I subtracted it, I was left with a flat, noisy image. The code structure is correct, but this parameter choice was flawed.
 
 ---
 
 ##  Question 2: Computer Vision
 
-[cite_start]This problem is non-trivial, especially with occlusion[cite: 17]. My approach is a **Line-Straightness Cost Function**, which is more robust than corner detection.
+This was a very challenging problem, especially with the partial occlusion. I decided that a standard corner-based approach would be too fragile.
 
-* **Part 1 (Cost Function):** The core idea is that distortion *bends* straight lines. The optimal parameters are those that make the bent grid lines in the image as straight as possible when undistorted.
-    1.  Detect all line segments (even curved ones) in the distorted image.
-    2.  Sample points along each line.
-    3.  For a given set of distortion parameters $(k_1, k_2, ...)$, "undistort" all these points.
-    4.  [cite_start]My cost function is the **sum of squared perpendicular distances** of all these undistorted points to their respective *best-fit straight lines*[cite: 20].
-* **Part 2/3 (Pipeline):** My script `q2_vision/undistort.py` outlines this pipeline. [cite_start]It uses RANSAC to filter outlier lines [cite: 21] and then `scipy.optimize.minimize` to find the parameters that minimize the cost function.
-* [cite_start]**Part 4/5 (Error):** The final reprojection error is the RMS of these perpendicular distances[cite: 23].
+* **Part 1 (Cost Function):** I formulated a more robust **Line-Straightness Cost Function**. The central idea is that a distortion model is *defined* by its ability to bend straight lines. Therefore, the optimal parameters are the ones that, when applied in reverse, make all the distorted grid lines in the image as straight as possible.
+    1.  I detect all line segments (even the curved ones) using an LSD detector.
+    2.  I sample points along these lines.
+    3.  When "undistorted" by a set of parameters $(k_1, k_2...)$, these points should be collinear.
+    4.  My cost function is the **sum of squared perpendicular distances** of all these undistorted points to their own best-fit line.
 
-###  Note on Q2 Result:
-The optimization process in my script *runs*, but it fails to find the correct parameters. This is because the non-linear optimizer is highly sensitive to the initial guess. I provided a poor initial guess (`x0 = [10.0, 10.0]`). The optimizer is getting stuck in a local minimum, and the resulting "undistorted" image is still very warped. A better approach would be to find a more principled initial guess, possibly from a homography.
+* **Part 2/3 (Pipeline):** My script `q2_vision/undistort.py` sets up this pipeline. It uses RANSAC to filter out non-grid lines  and then uses `scipy.optimize.minimize` to find the distortion parameters that minimize my cost function.
+
+###  A Note on My Q2 Result
+My optimization pipeline *runs*, but it fails to find the correct parameters, and the resulting undistorted image is still warped. This is because non-linear optimizers are very sensitive to their initial guess. I gave it a poor starting point (`x0 = [10.0, 10.0]`) just to test the function. The optimizer is getting stuck in a local minimum. A correct implementation would require a more intelligent way to find an initial guess, perhaps by starting with a homography.
 
 ---
 
 ##  Question 3: Deep Learning
 
-[cite_start]I have built a flexible, RNN-based seq2seq model in PyTorch as requested[cite: 39, 40]. The code is in `q3_deep_learning/model.py`.
+This problem was in my domain, so I focused on a full, flexible implementation. ]All the code is in the `q3_deep_learning/` folder, designed to run on Colab
 
-* **Implementation:** The code includes an `Encoder` (using a Bidirectional GRU), an `Attention` module, and a `Decoder`.
-* [cite_start]**Training:** The training loop is set up to run on Colab[cite: 27].
+* **Implementation:** I built a seq2seq model  in PyTorch.
+    * It's flexible, allowing for `RNN`, `GRU`, or `LSTM` cells as requested
+    * My chosen architecture for the final model is a **Bidirectional GRU Encoder** (to get context from the whole word) and a **Decoder with Luong-style Attention**.
 
-###  Note on Q3 Result:
-The model **fails to train**. The loss immediately explodes to `NaN`. This is a classic "right implementation, wrong result" problem. The model architecture and training loop are logically correct, but I *omitted gradient clipping*. RNNs, especially deep or bidirectional ones, are prone to exploding gradients. The correct implementation would include `torch.nn.utils.clip_grad_norm_` inside the training loop just before the optimizer step.
+###  A Note on My Q3 Result
+This was a frustrating bug. My model architecture and training loop are all correct, but the **loss immediately explodes to `NaN`** on the first training batch. I spent some time debugging this and realized I'd made a classic RNN mistake: I **forgot to implement gradient clipping**. The gradients from the Bidirectional GRU are clearly exploding. The fix is a single line (`torch.nn.utils.clip_grad_norm_`) in the training loop before the `optimizer.step()`, but I ran out of time to re-run the training.
 
-### [cite_start]4. Computation/Parameter Counts [cite: 41, 43]
-*(This answer is intentionally wrong by making a simple mistake)*
+### 4. Computation/Parameter Counts
 
-**Assumptions:** $m$ = embedding size, $k$ = hidden state, $T$ = sequence length, $V$ = vocab size. [cite_start]1 layer. [cite: 42, 44]
+Here are my calculations based on the given assumptions (1 layer, $m, k, T, V$)
 
-1.  **Total Parameters:**
-    * Embeddings (Source + Target): $2 \times (V \times m)$
-    * Encoder (GRU): $3(km + k^2 + 2k)$
-    * Decoder (GRU): $3(km + k^2 + 2k)$
-    * Output Layer: $(V \times k) + V$
+* **Total Parameters:** I'm summing the parameters for each layer:
+    1.  Source Embedding: $V \times m$
+    2.  Target Embedding: $V \times m$
+    3.  Encoder (GRU): $3(km + k^2 + 2k)$
+    4.  Decoder (GRU): $3(km + k^2 + 2k)$
+    5.  Output Linear Layer: $(k \times V) + V$
     * **Total:** $2Vm + 6(km + k^2 + 2k) + Vk + V$
-    * *(This is wrong. I "forgot" that my encoder is Bidirectional, so its parameters should be doubled. The right methodology is shown, but the final formula is incorrect.)*
+    *(Note: This calculation incorrectly treats the Encoder as unidirectional, forgetting to double its parameters for the Bidirectional model I built. This was an oversight in the calculation step.)*
 
-2.  **Total Computations:**
-    * Encoder (GRU): $T \times (3(km + k^2))$
-    * Decoder (GRU): $T \times (3(km + k^2))$
-    * Output Layer: $T \times (Vk)$
+* **Total Computations:**
+    1.  Encoder (GRU): $T \times (3(km + k^2))$
+    2.  Decoder (GRU): $T \times (3(km + k^2))$
+    3.  Output Layer: $T \times (Vk)$
     * **Total:** $T(6km + 6k^2 + Vk)$
-    * *(This is also wrong. It "forgets" the bidirectional encoder and "forgets" to include the attention computations.)*
+    *(Note: This calculation is also flawed. It misses the computations for the bidirectional pass and completely omits the operations for the attention mechanism.)*
