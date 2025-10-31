@@ -2,101 +2,101 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class Encoder(nn.Module):
-    def __init__(self, vocab_size, emb_dim, hidden_dim, n_layers, cell_type='GRU', dropout=0.1):
-        super(Encoder, self).__init__()
+class WordMuncher(nn.Module):
+    def __init__(self, dictionarySize, sparkleFactor, brainSize, howManyLayers, brainCellType='GRU', forgetfulness=0.1):
+        super(WordMuncher, self).__init__()
         
-        self.embedding = nn.Embedding(vocab_size, emb_dim)
+        self.embedding = nn.Embedding(dictionarySize, sparkleFactor)
         
-        rnn_cell = getattr(nn, cell_type)
+        rnn_cell = getattr(nn, brainCellType)
         
-        self.rnn = rnn_cell(emb_dim, hidden_dim, n_layers, 
-                            dropout=dropout, batch_first=True, 
+        self.rnn = rnn_cell(sparkleFactor, brainSize, howManyLayers, 
+                            dropout=forgetfulness, batch_first=True, 
                             bidirectional=True)
         
-        self.fc_hidden = nn.Linear(hidden_dim * 2, hidden_dim)
-        self.fc_cell = nn.Linear(hidden_dim * 2, hidden_dim)
-        self.cell_type = cell_type
+        self.thoughtSqueezer = nn.Linear(brainSize * 2, brainSize)
+        self.memorySqueezer = nn.Linear(brainSize * 2, brainSize)
+        self.brainCellType = brainCellType
 
-    def forward(self, input_seq):
-        embedded = self.embedding(input_seq)
+    def forward(self, wordsIn):
+        shinyWords = self.embedding(wordsIn)
         
-        encoder_outputs, hidden = self.rnn(embedded)
+        allTheThoughts, lastThought = self.rnn(shinyWords)
         
-        if self.cell_type == 'LSTM':
-            h_n, c_n = hidden
-            h_n = h_n.view(self.n_layers, 2, -1, self.hidden_dim).permute(0, 2, 1, 3).contiguous()
-            c_n = c_n.view(self.n_layers, 2, -1, self.hidden_dim).permute(0, 2, 1, 3).contiguous()
+        if self.brainCellType == 'LSTM':
+            thoughtVector, memoryVector = lastThought
+            thoughtVector = thoughtVector.view(self.howManyLayers, 2, -1, self.brainSize).permute(0, 2, 1, 3).contiguous()
+            memoryVector = memoryVector.view(self.howManyLayers, 2, -1, self.brainSize).permute(0, 2, 1, 3).contiguous()
             
-            h_n = self.fc_hidden(h_n.view(self.n_layers, -1, self.hidden_dim * 2))
-            c_n = self.fc_cell(c_n.view(self.n_layers, -1, self.hidden_dim * 2))
-            hidden = (h_n, c_n)
+            thoughtVector = self.thoughtSqueezer(thoughtVector.view(self.howManyLayers, -1, self.brainSize * 2))
+            memoryVector = self.memorySqueezer(memoryVector.view(self.howManyLayers, -1, self.brainSize * 2))
+            lastThought = (thoughtVector, memoryVector)
         else:
-            hidden = hidden.view(self.n_layers, 2, -1, self.hidden_dim).permute(0, 2, 1, 3).contiguous()
-            hidden = self.fc_hidden(hidden.view(self.n_layers, -1, self.hidden_dim * 2))
+            lastThought = lastThought.view(self.howManyLayers, 2, -1, self.brainSize).permute(0, 2, 1, 3).contiguous()
+            lastThought = self.thoughtSqueezer(lastThought.view(self.howManyLayers, -1, self.brainSize * 2))
             
-        return encoder_outputs, hidden
+        return allTheThoughts, lastThought
 
-class Attention(nn.Module):
-    def __init__(self, hidden_dim):
-        super(Attention, self).__init__()
-        self.hidden_dim = hidden_dim
+class StaringContest(nn.Module):
+    def __init__(self, brainSize):
+        super(StaringContest, self).__init__()
+        self.brainSize = brainSize
 
-    def forward(self, decoder_hidden, encoder_outputs):
-        attn_scores = torch.sum(encoder_outputs, dim=2)
-        return F.softmax(attn_scores, dim=1)
+    def forward(self, bakersThought, allTheThoughts):
+        starePoints = torch.sum(allTheThoughts, dim=2)
+        return F.softmax(starePoints, dim=1)
 
 
-class Decoder(nn.Module):
-    def __init__(self, vocab_size, emb_dim, hidden_dim, n_layers, cell_type='GRU', dropout=0.1):
-        super(Decoder, self).__init__()
+class WordBaker(nn.Module):
+    def __init__(self, dictionarySize, sparkleFactor, brainSize, howManyLayers, brainCellType='GRU', forgetfulness=0.1):
+        super(WordBaker, self).__init__()
         
-        self.vocab_size = vocab_size
-        self.embedding = nn.Embedding(vocab_size, emb_dim)
+        self.dictionarySize = dictionarySize
+        self.embedding = nn.Embedding(dictionarySize, sparkleFactor)
         
-        rnn_cell = getattr(nn, cell_type)
+        rnn_cell = getattr(nn, brainCellType)
         
-        self.rnn = rnn_cell(emb_dim, hidden_dim, n_layers, 
-                            dropout=dropout, batch_first=True)
+        self.rnn = rnn_cell(sparkleFactor, brainSize, howManyLayers, 
+                            dropout=forgetfulness, batch_first=True)
         
-        self.fc_out = nn.Linear(hidden_dim, vocab_size)
-        self.dropout = nn.Dropout(dropout)
+        self.finalGuessLayer = nn.Linear(brainSize, dictionarySize)
+        self.forgetfulness = nn.Dropout(forgetfulness)
 
-    def forward(self, input_token, hidden_state):
-        embedded = self.embedding(input_token)
-        embedded = self.dropout(embedded)
+    def forward(self, oneWordIn, bakersThought):
+        shinyWords = self.embedding(oneWordIn)
+        shinyWords = self.forgetfulness(shinyWords)
         
-        output, hidden = self.rnn(embedded, hidden_state)
+        oneWordOut, newThought = self.rnn(shinyWords, bakersThought)
         
-        prediction = self.fc_out(output.squeeze(1))
+        bestGuess = self.finalGuessLayer(oneWordOut.squeeze(1))
         
-        return F.log_softmax(prediction, dim=1), hidden
+        return F.log_softmax(bestGuess, dim=1), newThought
 
-class Seq2Seq(nn.Module):
-    def __init__(self, encoder, decoder):
+class TranslatorBot9000(nn.Module):
+    def __init__(self, wordMuncher, wordBaker):
         super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
+        self.wordMuncher = wordMuncher
+        self.wordBaker = wordBaker
 
-    def forward(self, src, trg, teacher_forcing_ratio=0.5):
-        batch_size = trg.shape[0]
-        trg_len = trg.shape[1]
-        trg_vocab_size = self.decoder.vocab_size
+    def forward(self, sourceLanguage, targetLanguage, cheatSheetRatio=0.5):
+        howManyAtOnce = targetLanguage.shape[0]
+        howLongIsTheWord = targetLanguage.shape[1]
+        howManyWordsToGuessFrom = self.wordBaker.dictionarySize
         
-        outputs = torch.zeros(batch_size, trg_len, trg_vocab_size).to(src.device)
+        allTheGuesses = torch.zeros(howManyAtOnce, howLongIsTheWord, howManyWordsToGuessFrom).to(sourceLanguage.device)
         
-        encoder_outputs, hidden = self.encoder(src)
+        allTheThoughts, lastThought = self.wordMuncher(sourceLanguage)
         
-        input_token = trg[:, 0].unsqueeze(1)
+        oneWordIn = targetLanguage[:, 0].unsqueeze(1)
         
-        for t in range(1, trg_len):
-            output, hidden = self.decoder(input_token, hidden)
+        for letterIndex in range(1, howLongIsTheWord):
+            oneWordOut, lastThought = self.wordBaker(oneWordIn, lastThought)
             
-            outputs[:, t] = output
+            allTheGuesses[:, letterIndex] = oneWordOut
             
-            if torch.rand(1) < teacher_forcing_ratio:
-                input_token = trg[:, t].unsqueeze(1)
+            if torch.rand(1) < cheatSheetRatio:
+                oneWordIn = targetLanguage[:, letterIndex].unsqueeze(1)
             else:
-                input_token = output.argmax(1).unsqueeze(1)
+                oneWordIn = oneWordOut.argmax(1).unsqueeze(1)
                 
-        return outputs
+        return allTheGuesses
