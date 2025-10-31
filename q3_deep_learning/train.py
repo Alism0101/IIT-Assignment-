@@ -1,51 +1,51 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from model import Encoder, Decoder, Seq2Seq
+from model import WordMuncher, WordBaker, TranslatorBot9000
 import numpy as np
 
-INPUT_DIM = 100
-OUTPUT_DIM = 120
-EMB_DIM = 128
-HID_DIM = 256
-N_LAYERS = 1
-CELL_TYPE = 'GRU'
+HOW_MANY_IN_WORDS = 100
+HOW_MANY_OUT_WORDS = 120
+SPARKLE_FACTOR = 128
+BRAIN_SIZE = 256
+HOW_MANY_LAYERS = 1
+BRAIN_CELL_TYPE = 'GRU'
 
-enc = Encoder(INPUT_DIM, EMB_DIM, HID_DIM, N_LAYERS, CELL_TYPE)
-dec = Decoder(OUTPUT_DIM, EMB_DIM, HID_DIM, N_LAYERS, CELL_TYPE)
-model = Seq2Seq(enc, dec)
+muncher = WordMuncher(HOW_MANY_IN_WORDS, SPARKLE_FACTOR, BRAIN_SIZE, HOW_MANY_LAYERS, BRAIN_CELL_TYPE)
+baker = WordBaker(HOW_MANY_OUT_WORDS, SPARKLE_FACTOR, BRAIN_SIZE, HOW_MANY_LAYERS, BRAIN_CELL_TYPE)
+bot = TranslatorBot9000(muncher, baker)
 
-optimizer = optim.Adam(model.parameters())
-criterion = nn.NLLLoss(ignore_index=0)
+learningJuice = optim.Adam(bot.parameters())
+sadnessCalculator = nn.NLLLoss(ignore_index=0)
 
-def train_loop(model, optimizer, criterion):
-    model.train()
-    epoch_loss = 0
+def oneRoundOfSchool(da_bot, da_juice, da_calc):
+    da_bot.train()
+    totalSadness = 0
     
-    src = torch.randint(1, INPUT_DIM, (32, 10))
-    trg = torch.randint(1, OUTPUT_DIM, (32, 10))
+    in_words = torch.randint(1, HOW_MANY_IN_WORDS, (32, 10))
+    out_words = torch.randint(1, HOW_MANY_OUT_WORDS, (32, 10))
 
-    optimizer.zero_grad()
+    da_juice.zero_grad()
     
-    output = model(src, trg)
+    allTheGuesses = da_bot(in_words, out_words)
     
-    output_dim = output.shape[-1]
+    guess_dim = allTheGuesses.shape[-1]
     
-    output = output[:, 1:].reshape(-1, output_dim)
-    trg = trg[:, 1:].reshape(-1)
+    allTheGuesses = allTheGuesses[:, 1:].reshape(-1, guess_dim)
+    out_words = out_words[:, 1:].reshape(-1)
     
-    loss = criterion(output, trg)
+    currentSadness = da_calc(allTheGuesses, out_words)
     
-    loss.backward()
+    currentSadness.backward()
     
-    optimizer.step()
+    da_juice.step()
     
-    return loss.item()
+    return currentSadness.item()
 
 if __name__ == "__main__":
-    print("Starting training loop...")
-    loss = train_loop(model, optimizer, criterion)
-    print(f"Loss after one batch: {loss}")
+    print("Sending bot to school...")
+    sadnessLevel = oneRoundOfSchool(bot, learningJuice, sadnessCalculator)
+    print(f"Sadness level after one class: {sadnessLevel}")
     
-    if np.isnan(loss) or np.isinf(loss):
-        print("\nTraining failed: Loss is NaN or Inf.")
+    if np.isnan(sadnessLevel) or np.isinf(sadnessLevel):
+        print("\nBot's brain exploded. Sadness is NaN or Inf.")
