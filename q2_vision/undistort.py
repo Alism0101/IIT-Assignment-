@@ -23,7 +23,7 @@ def calculateTheOuchie(magicNumbers, straightishThings):
     return bigSadness + (wobble**2 + warp**2) * 0.1
 
 if __name__ == "__main__":
-    allTheLines = findTheSquiggles('your_photo.jpg')
+    allTheLines = findTheSquiggles('nwe.jpg')
     
     if allTheLines:
         print(f"Found {len(allTheLines)} squiggly lines.")
@@ -39,4 +39,4 @@ if __name__ == "__main__":
             print("The wizard gave up.")
             
     else:
-        print("Error: Could not find 'your_photo.jpg' or it's just a blank wall.")
+        print("Error: Could not find 'nwe.jpg' or it's just a blank wall.")
