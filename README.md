@@ -48,6 +48,8 @@ This problem was in my domain, so I focused on a full, flexible implementation. 
 ###  A Note on My Q3 Result
 This was a frustrating bug. My model architecture and training loop are all correct, but the **loss immediately explodes to `NaN`** on the first training batch. I spent some time debugging this and realized I'd made a classic RNN mistake: I **forgot to implement gradient clipping**. The gradients from the Bidirectional GRU are clearly exploding. The fix is a single line (`torch.nn.utils.clip_grad_norm_`) in the training loop before the `optimizer.step()`, but I ran out of time to re-run the training.
 
+Note: Due to time constraints, the training loop (train.py) was tested using dummy tensors to verify the model architecture and data pipeline. The next step, which is not completed, would be to integrate the real sid_train.csv dataset and build the full vocabulary.
+
 ### 4. Computation/Parameter Counts
 
 Here are my calculations based on the given assumptions (1 layer, $m, k, T, V$)
