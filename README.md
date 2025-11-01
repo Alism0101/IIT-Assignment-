@@ -1,6 +1,6 @@
 Here is my submission for the Technical Aptitude round.
 
-My GitHub repository with all code and assets is located at: `[Your GitHub Link Here]`
+My GitHub repository with all code and assets is located at: (https://github.com/Alism0101/IIT-Assignment-/tree/main)
 
 Given the deadline and the complexity of the problems, I had to triage my approach. I focused on a full implementation for Question 3, as it aligns directly with my Computer Science background. For Questions 1 and 2, I've focused on demonstrating my problem-solving methodology with core implementations and detailed conceptual write-ups.
 
