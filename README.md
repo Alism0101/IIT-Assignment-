@@ -11,10 +11,10 @@ Given the deadline and the complexity of the problems, I had to triage my approa
 My approach here was to implement Homomorphic Filtering. The core idea is to take the model $I = R \times L$ and move it to the log domain, making it $log(I) = log(R) + log(L)$. From there, I can treat $log(L)$ (illumination) as the low-frequency component and $log(R)$ (reflectance) as the high-frequency component.
 
 * **Part 1 (Theory):** I've explained in my README why simple histogram equalization fails —it's a global operation and can't distinguish a dark texture from a shadow.
-* **Part 2 (Implementation):** The code is in `q1_imaging/`. I wrote a function `manual_low_pass_filter` that performs a "manual" 2D convolution via nested loops to separate the components, as requested
+* **Part 2 (Implementation):** The code is in `q1_imaging/`. I wrote a function  that performs a "manual" 2D convolution via nested loops to separate the components, as requested
 * **Part 3 (Color):** For the color version, my algorithm in the code converts the image from BGR to the **CIE L\*a\*b\*** color space. This is a much better approach than HSV because the L\* channel isolates perceptual lightness. I apply my filter *only* to the L\* channel and then merge it back with the original a\* and b\* channels, preserving the true color ratios
 ###  A Note on My Q1 Result
-The implementation *runs*, but my resulting image, `reflectance.jpg`, is clearly wrong. After debugging, I realized I made a critical parameter error. ]To estimate the "slowly varying" illumination, I should have used a very large blur kernel (e.g., 31x31 or 41x41).
+The implementation *runs*, but my resulting image, is clearly wrong. After debugging, I realized I made a critical parameter error. ]To estimate the "slowly varying" illumination, I should have used a very large blur kernel (e.g., 31x31 or 41x41).
 
 I used a **5x5 kernel**. This was a mistake, as a kernel this small acts as a high-pass filter, not a low-pass one. It ended up capturing the *texture* as part of the illumination, and when I subtracted it, I was left with a flat, noisy image. The code structure is correct, but this parameter choice was flawed.
 
